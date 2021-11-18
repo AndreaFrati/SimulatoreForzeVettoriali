@@ -16,18 +16,22 @@ import javax.swing.JPanel;
 public class Vector {
     protected String name;
     protected double forza;
-    protected Color colore;
+    protected Color colore = Color.GREEN;
     protected double x;
     protected double y;
     protected double angolo;
     public String getName(){
         return this.name;
     }
+    
     public Vector(double x, double y, String name){
         this.name = name;
         this.x = x;
         this.y = y;
         this.forza = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+        if(x == 0){
+            x = 1;
+        }
         this.angolo = Math.toDegrees(Math.atan(y/x));
     }
     public Vector(String name, double angolo, double forza){

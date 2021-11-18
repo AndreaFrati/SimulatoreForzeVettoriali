@@ -9,15 +9,26 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.List;
 import java.awt.RenderingHints;
+import static java.awt.SystemColor.text;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.List;
+
 import javax.swing.JColorChooser;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.Timer;
@@ -37,7 +48,10 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
     private double yObject;
     private double xCenter;
     private double yCenter;
+    private boolean firstVec = true;
+    
     private boolean firstPaint = true;
+    boolean animationStarted = false;
     BufferedImage bi;
     Graphics2D big;
     Timer timer;
@@ -58,7 +72,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         super.paint(g);
         g = canvasPanel.getGraphics();
         Graphics2D g2 = (Graphics2D) g;
-        bi = new BufferedImage(canvasPanel.getWidth(), canvasPanel.getHeight(), BufferedImage.TYPE_INT_RGB);
+        bi = new BufferedImage(canvasPanel.getWidth(), canvasPanel.getHeight(), BufferedImage.TYPE_INT_ARGB);
         big = bi.createGraphics();
         big.setStroke(new BasicStroke(0.8f));
         big.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -70,13 +84,19 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
             xObject = xCenter;
             yObject = yCenter;
         }
+        big.setColor(Color.RED);
         for (int i = 0; i < vectors.size(); i++) {
             big.draw(new Line2D.Double(xObject, yObject, (int) vectors.get(i).x + xObject, (int) vectors.get(i).y + yObject));
+            big.setColor(vectors.get(i).colore);
+            
         }
         if (drag) {
+            big.setColor(Color.BLACK);
             big.draw(new Line2D.Double(x, y, (int) vectorTemp.x, (int) vectorTemp.y));
         }
+        //big.setColor(Color.BLUE);
         big.draw(new Line2D.Double(xCenter, yCenter, xObject, yObject));
+        big.setColor(Color.BLACK);
         big.fill(new Ellipse2D.Double(xObject - 10, yObject - 10, 20, 20));
         
         g2.drawImage(bi, 0, 0, this);
@@ -151,17 +171,40 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         vectorList = new javax.swing.JList<>();
         newVectorButton = new javax.swing.JButton();
         backButton = new javax.swing.JButton();
-        jButton1 = new javax.swing.JButton();
+        removeButton = new javax.swing.JButton();
+        applyButton = new javax.swing.JButton();
         canvasPanel = new javax.swing.JPanel();
         jToolBar1 = new javax.swing.JToolBar();
         startButton = new javax.swing.JButton();
         resetButton = new javax.swing.JButton();
         stopButton = new javax.swing.JButton();
+        saveButton = new javax.swing.JButton();
+        importButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        addHierarchyBoundsListener(new java.awt.event.HierarchyBoundsListener() {
+            public void ancestorMoved(java.awt.event.HierarchyEvent evt) {
+            }
+            public void ancestorResized(java.awt.event.HierarchyEvent evt) {
+                formAncestorResized(evt);
+            }
+        });
         addMouseListener(new java.awt.event.MouseAdapter() {
             public void mousePressed(java.awt.event.MouseEvent evt) {
                 formMousePressed(evt);
+            }
+        });
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            public void componentResized(java.awt.event.ComponentEvent evt) {
+                formComponentResized(evt);
+            }
+        });
+
+        controlsPanel.addHierarchyBoundsListener(new java.awt.event.HierarchyBoundsListener() {
+            public void ancestorMoved(java.awt.event.HierarchyEvent evt) {
+            }
+            public void ancestorResized(java.awt.event.HierarchyEvent evt) {
+                controlsPanelAncestorResized(evt);
             }
         });
 
@@ -173,9 +216,20 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
 
         yCoordLabel.setText("Y");
 
+        textAngolo.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                textAngoloPropertyChange(evt);
+            }
+        });
+
         textName.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 textNameActionPerformed(evt);
+            }
+        });
+        textName.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                textNamePropertyChange(evt);
             }
         });
 
@@ -289,10 +343,17 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
             }
         });
 
-        jButton1.setText("remove");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        removeButton.setText("remove");
+        removeButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                removeButtonActionPerformed(evt);
+            }
+        });
+
+        applyButton.setText("apply");
+        applyButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                applyButtonActionPerformed(evt);
             }
         });
 
@@ -322,14 +383,18 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
                                 .addGap(0, 0, Short.MAX_VALUE)))
                         .addContainerGap())))
             .addGroup(controlsPanelLayout.createSequentialGroup()
-                .addGap(99, 99, 99)
-                .addComponent(jButton1)
+                .addGap(65, 65, 65)
+                .addComponent(removeButton)
+                .addGap(18, 18, 18)
+                .addComponent(applyButton)
                 .addGap(0, 0, Short.MAX_VALUE))
         );
         controlsPanelLayout.setVerticalGroup(
             controlsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(controlsPanelLayout.createSequentialGroup()
-                .addComponent(jButton1)
+                .addGroup(controlsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(removeButton)
+                    .addComponent(applyButton))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(vectorsScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 333, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -347,8 +412,9 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
 
         getContentPane().add(controlsPanel, java.awt.BorderLayout.EAST);
 
-        canvasPanel.setBackground(new java.awt.Color(255, 0, 51));
+        canvasPanel.setBackground(new java.awt.Color(255, 255, 255));
         canvasPanel.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+        canvasPanel.setForeground(new java.awt.Color(255, 255, 255));
         canvasPanel.setMinimumSize(new java.awt.Dimension(400, 400));
         canvasPanel.setPreferredSize(new java.awt.Dimension(400, 400));
         canvasPanel.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
@@ -407,6 +473,28 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         });
         jToolBar1.add(stopButton);
 
+        saveButton.setText("SAVE");
+        saveButton.setFocusable(false);
+        saveButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        saveButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        saveButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                saveButtonActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(saveButton);
+
+        importButton.setText("IMPORT");
+        importButton.setFocusable(false);
+        importButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        importButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        importButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                importButtonActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(importButton);
+
         getContentPane().add(jToolBar1, java.awt.BorderLayout.PAGE_START);
 
         pack();
@@ -437,43 +525,56 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
     private void jCheckBox1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBox1ActionPerformed
 
     }//GEN-LAST:event_jCheckBox1ActionPerformed
-
+    public boolean isDouble(String str){
+        try {
+            Double.parseDouble(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
     private void createButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_createButtonActionPerformed
         String nameVar = textName.getText();
-        if (!(nameVar.equals(""))) {
-            Vector vector;
-            if (jCheckBox1.isSelected()) {
+        /*int[] selected = vectorList.getSelectedIndices();
+        if (selected[0] != 0) {*/
+            if (!(nameVar.equals(""))) {
+            Vector vector = null;
+            if (jCheckBox1.isSelected() && isDouble(textAngolo.getText()) && isDouble(textForza.getText())) {
                 vector = new Vector(nameVar, Double.parseDouble(textAngolo.getText()), Double.parseDouble(textForza.getText()));
-            } else {
+                vectors.add(vector);
+            } else if(isDouble(textX1.getText()) && isDouble(textY1.getText())){
                 vector = new Vector(Double.parseDouble(textX1.getText()), Double.parseDouble(textY1.getText()), nameVar);
+                vectors.add(vector);
             }
-            vectors.add(vector);
-            vectorList.setModel(new javax.swing.AbstractListModel<String>() {
+            if(vector != null){
+                vectorList.setModel(new javax.swing.AbstractListModel<String>() {
 
-                String[] strings = addVectorNames();
+                    String[] strings = addVectorNames();
 
-                public int getSize() {
-                    return strings.length;
-                }
+                    public int getSize() {
+                        return strings.length;
+                    }
 
-                public String getElementAt(int i) {
-                    return strings[i];
-                }
-            });
-            vectorsScrollPane.setViewportView(vectorList);
-            allVisible();
-            createButton.setVisible(false);
-            textX1.setText(vector.x + "");
-            textY1.setText(vector.y + "");
-            textForza.setText(vector.forza + "");
-            textAngolo.setText(vector.angolo + "");
-            jCheckBox1.setEnabled(true);
-            xRis += vector.x;
-            yRis += vector.y;
-            fRis = new Vector(xRis, yRis, "forza risultante");
-            vectors.set(0, fRis);
-            repaint();
+                    public String getElementAt(int i) {
+                        return strings[i];
+                    }
+                });
+                vectorsScrollPane.setViewportView(vectorList);
+                allVisible();
+                createButton.setVisible(false);
+                textX1.setText(vector.x + "");
+                textY1.setText(vector.y + "");
+                textForza.setText(vector.forza + "");
+                textAngolo.setText(vector.angolo + "");
+                jCheckBox1.setEnabled(true);
+                xRis += vector.x;
+                yRis += vector.y;
+                fRis = new Vector(xRis, yRis, "forza risultante");
+                vectors.set(0, fRis);
+                repaint();
+            }
         }
+        
 
     }//GEN-LAST:event_createButtonActionPerformed
 
@@ -504,6 +605,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
     private void formMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_formMousePressed
 
     }//GEN-LAST:event_formMousePressed
+    
     private void updateList() {
         vectorList.setModel(new javax.swing.AbstractListModel<String>() {
 
@@ -524,13 +626,15 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
             xRis += vectors.get(i).x;
             yRis += vectors.get(i).y;
         }
+        fRis = new Vector(xRis, yRis, "forza risultante");
+        vectors.set(0, fRis);
         repaint();
     }
     private void canvasPanelMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_canvasPanelMouseReleased
         finalX = evt.getX() - x;
         finalY = evt.getY() - y;
         Vector vector = new Vector(finalX, finalY, "drawVector" + num);
-        num += 1;
+        
         vectors.add(vector);
         updateList();
         allVisible();
@@ -539,15 +643,21 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         textY1.setText(vector.y + "");
         textForza.setText(vector.forza + "");
         textAngolo.setText(vector.angolo + "");
+        textName.setText("drawVector" + num);
+        num += 1;
         jCheckBox1.setEnabled(true);
-        xRis += vector.x;
-        yRis += vector.y;
+        if(!firstVec){
+            xRis += vector.x;
+            yRis += vector.y;
+        }
+        firstVec = false;
         fRis = new Vector(xRis, yRis, "forza risultante");
         vectors.set(0, fRis);
         drag = false;
+        
         repaint();
     }//GEN-LAST:event_canvasPanelMouseReleased
-
+    
     private void canvasPanelMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_canvasPanelMousePressed
         x = evt.getX();
         y = evt.getY();
@@ -572,8 +682,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
     }//GEN-LAST:event_backButtonActionPerformed
 
     private void resetButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_resetButtonActionPerformed
-
-timer.stop();
+        timer.stop();
         xObject = xCenter;
         yObject = yCenter;
         repaint();
@@ -597,19 +706,19 @@ timer.stop();
         };
         timer = new Timer(1, act);
         timer.start(); 
-        repaint();
+        animationStarted = true;
     }//GEN-LAST:event_startButtonActionPerformed
 
     private void buttonColorActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonColorActionPerformed
-        /*Color color = Color.BLACK;
-        color = JColorChooser.showDialog(null, 'scegli un colore', colore);
-        vectorList.setSelectedIndices(indices);
-         for (int i = 0; i < vectors.size(); i++) {
-            
-        }*/
+        int[] selected = vectorList.getSelectedIndices();
+        if (selected.length == 1) {
+            Color newColor = JColorChooser.showDialog(null, "Choose a color", Color.BLUE);
+            vectors.get(selected[0]-1).colore = newColor;
+            repaint();
+        }
     }//GEN-LAST:event_buttonColorActionPerformed
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    private void removeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeButtonActionPerformed
 
         int[] selected = vectorList.getSelectedIndices();
         if (selected == null || selected.length == 0) {
@@ -621,11 +730,121 @@ timer.stop();
             }
         }
         updateList();
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }//GEN-LAST:event_removeButtonActionPerformed
 
-    /**
-     * @param args the command line arguments
-     */
+    private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveButtonActionPerformed
+        for (int i = 0; i < vectors.size(); i++) {
+            Vector vector = vectors.get(i);
+            try{
+                saveState(vector);
+            }catch(IOException e){
+                Path fileName = Path.of("vectors.txt");
+                System.out.println(fileName);
+            }
+        }   
+    }//GEN-LAST:event_saveButtonActionPerformed
+
+    private void importButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_importButtonActionPerformed
+        JFileChooser fileChooser = new JFileChooser();
+        int returnValue = fileChooser.showOpenDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) 
+        {
+        File selectedFile = fileChooser.getSelectedFile();
+        System.out.println(selectedFile.getName());
+        try{
+            importFile(selectedFile);
+        }catch(IOException e){
+            System.out.println("IOException");
+        }
+        
+        }
+        
+    }//GEN-LAST:event_importButtonActionPerformed
+
+    private void controlsPanelAncestorResized(java.awt.event.HierarchyEvent evt) {//GEN-FIRST:event_controlsPanelAncestorResized
+        // TODO add your handling code here:
+    }//GEN-LAST:event_controlsPanelAncestorResized
+
+    private void formAncestorResized(java.awt.event.HierarchyEvent evt) {//GEN-FIRST:event_formAncestorResized
+        xCenter = (canvasPanel.getX() + canvasPanel.getWidth()) / 2;
+        yCenter = (canvasPanel.getY() + canvasPanel.getHeight()) / 2;
+        xObject = xCenter;
+        yObject = yCenter;
+        repaint();
+    }//GEN-LAST:event_formAncestorResized
+
+    private void formComponentResized(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_formComponentResized
+        if(!animationStarted){
+            xCenter = (canvasPanel.getX() + canvasPanel.getWidth()) / 2;
+            yCenter = (canvasPanel.getY() + canvasPanel.getHeight()) / 2;
+            xObject = xCenter;
+            yObject = yCenter;
+        }
+        repaint();
+    }//GEN-LAST:event_formComponentResized
+
+    private void applyButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_applyButtonActionPerformed
+       int[] selected = vectorList.getSelectedIndices();
+        if (selected[0] != 0 && selected.length == 1 && isDouble(textAngolo.getText()) &&
+                isDouble(textForza.getText()) && isDouble(textX1.getText()) &&
+                isDouble(textY1.getText()) && textName.getText() != null) {
+            double oldAngolo = vectors.get(selected[0]).angolo;
+            double oldForza = vectors.get(selected[0]).forza;
+            double oldX = vectors.get(selected[0]).x;
+            double oldY = vectors.get(selected[0]).y;
+            String oldName = vectors.get(selected[0]).name;
+            double newAngolo = Double.parseDouble(textAngolo.getText());
+            double newForza = Double.parseDouble(textAngolo.getText());
+            double newX = Double.parseDouble(textAngolo.getText());
+            double newY = Double.parseDouble(textAngolo.getText());
+            String newName = textAngolo.getText();
+                if(oldAngolo != newAngolo ){
+                    
+                }
+            vectors.get(selected[0]).y = Double.parseDouble(textForza.getText());
+            vectors.get(selected[0]).x = Double.parseDouble(textX1.getText());
+            vectors.get(selected[0]).forza = Double.parseDouble(textY1.getText());
+            vectors.get(selected[0]).name = textName.getText();
+        }
+        repaint();
+    }//GEN-LAST:event_applyButtonActionPerformed
+
+    private void textNamePropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_textNamePropertyChange
+        
+    }//GEN-LAST:event_textNamePropertyChange
+
+    private void textAngoloPropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_textAngoloPropertyChange
+        
+    }//GEN-LAST:event_textAngoloPropertyChange
+    private void saveState(Vector vector)throws IOException{
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy.MM.dd HH.mm.ss");
+        LocalDateTime now = LocalDateTime.now();
+        String nameFile = "vectors" + dtf.format(now) + ".txt";
+        Path fileName = Paths.get(nameFile);
+        String text = vector.x +";"+ vector.y +";"+ vector.forza +";"+ vector.angolo +";" + vector.name +";" +xObject + ";"+ yObject + "\n";
+        File myObj = new File("vectors" + dtf.format(now) + ".txt");
+        myObj.createNewFile();
+        Files.write(fileName,text.getBytes(), StandardOpenOption.APPEND);
+        
+        //String file_content = Files.readString(fileName);
+    }
+    private void importFile(File selectedFile) throws IOException {
+        Path fileName = selectedFile.toPath();
+        if(Files.exists(fileName) && Files.isReadable(fileName)){
+            List<String> lines = Files.readAllLines(fileName);
+            vectors.clear();
+            for (String line : lines) 
+            { 
+                String[] parts = line.split(";");
+                Vector vector = new Vector(Double.parseDouble(parts[0]), Double.parseDouble(parts[1]), parts[4]);
+                xObject = Double.parseDouble(parts[5]);
+                xObject = Double.parseDouble(parts[6]);
+                vectors.add(vector);
+            }
+            updateList();
+        }
+        
+    }
     public static void main(String args[]) {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
@@ -660,18 +879,21 @@ timer.stop();
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel angoloLabel;
+    private javax.swing.JButton applyButton;
     private javax.swing.JButton backButton;
     private javax.swing.JButton buttonColor;
     private javax.swing.JPanel canvasPanel;
     private javax.swing.JPanel controlsPanel;
     private javax.swing.JButton createButton;
     private javax.swing.JLabel forzaLabel;
-    private javax.swing.JButton jButton1;
+    private javax.swing.JButton importButton;
     private javax.swing.JCheckBox jCheckBox1;
     private javax.swing.JToolBar jToolBar1;
     private javax.swing.JLabel nameLabel;
     private javax.swing.JButton newVectorButton;
+    private javax.swing.JButton removeButton;
     private javax.swing.JButton resetButton;
+    private javax.swing.JButton saveButton;
     private javax.swing.JButton startButton;
     private javax.swing.JButton stopButton;
     private javax.swing.JTextField textAngolo;
