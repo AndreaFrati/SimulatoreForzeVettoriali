@@ -10,7 +10,6 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import static java.awt.SystemColor.text;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
@@ -38,10 +37,10 @@ import javax.swing.Timer;
  * @author andrea.frati
  */
 public class InterfacciaGrafica extends javax.swing.JFrame {
-
+    
     private ArrayList<Vector> vectors = new ArrayList<>();
-    private Vector vectorTemp = new Vector(0, 0, "a");
-    private Vector fRis = new Vector(0, 0, "forza risultante");
+    private Vector vectorTemp = new Vector(0, 0, "a", false);
+    private Vector fRis = new Vector(0, 0, "forza risultante", false);
     private double xRis = 0;
     private double yRis = 0;
     private double xObject;
@@ -49,9 +48,15 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
     private double xCenter;
     private double yCenter;
     private boolean firstVec = true;
-    
+    private boolean enableKeyInput;
     private boolean firstPaint = true;
     boolean animationStarted = false;
+    int x;
+    int y;
+    int finalX;
+    int finalY;
+    int num = 0;
+    boolean drag = false;
     BufferedImage bi;
     Graphics2D big;
     Timer timer;
@@ -67,19 +72,22 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         createButton.setVisible(false);
         vectors.add(fRis);
     }
+    
     @Override
     public void paint(Graphics g) {
         super.paint(g);
         g = canvasPanel.getGraphics();
         Graphics2D g2 = (Graphics2D) g;
+        drawGrid(g2);
         bi = new BufferedImage(canvasPanel.getWidth(), canvasPanel.getHeight(), BufferedImage.TYPE_INT_ARGB);
         big = bi.createGraphics();
+        
         big.setStroke(new BasicStroke(0.8f));
         big.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         big.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         xCenter = (canvasPanel.getX() + canvasPanel.getWidth()) / 2;
         yCenter = (canvasPanel.getY() + canvasPanel.getHeight()) / 2;
-        if(firstPaint){
+        if (firstPaint) {
             firstPaint = false;
             xObject = xCenter;
             yObject = yCenter;
@@ -93,15 +101,39 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         if (drag) {
             big.setColor(Color.BLACK);
             big.draw(new Line2D.Double(x, y, (int) vectorTemp.x, (int) vectorTemp.y));
+           // big.draw(new Line2D.Double(xCenter, yCenter, (int) vectorTemp.x, (int) vectorTemp.y));
         }
         //big.setColor(Color.BLUE);
-        big.draw(new Line2D.Double(xCenter, yCenter, xObject, yObject));
+        //big.draw(new Line2D.Double(xCenter, yCenter, xObject, yObject));
         big.setColor(Color.BLACK);
         big.fill(new Ellipse2D.Double(xObject - 10, yObject - 10, 20, 20));
         
         g2.drawImage(bi, 0, 0, this);
     }
-
+    
+    private void drawGrid(Graphics g) {
+        int size = 10;
+        int gw = canvasPanel.getWidth();
+        int gh = canvasPanel.getHeight();
+        g.drawString(String.format("0;0"), 0, 10);
+        for (int gx = 0; gx < gw; gx += size) {
+            g.setColor(Color.LIGHT_GRAY);
+            g.drawLine(gx, 0, gx, gh);
+            if (x == gh/gw){
+                g.setColor(Color.BLACK);
+                g.drawString(String.format("%d",gx), gx, 0);
+            }            
+        }
+        for (int gy = 0; gy < gh; gy += size) { 
+            g.setColor(Color.LIGHT_GRAY);
+            g.drawLine(0, gy, gw, gy);
+            if (y == gw/gw){
+                g.setColor(Color.BLACK);
+                g.drawString(String.format("%d",gy), 0, gy);
+            }
+        }        
+    }
+    
     public void allVisible() {
         buttonColor.setVisible(true);
         angoloLabel.setVisible(true);
@@ -109,7 +141,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         xCoordLabel.setVisible(true);
         yCoordLabel.setVisible(true);
         nameLabel.setVisible(true);
-
+        
         textColor.setVisible(true);
         textForza.setVisible(true);
         textAngolo.setVisible(true);
@@ -117,7 +149,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         textY1.setVisible(true);
         textName.setVisible(true);
     }
-
+    
     public void allInvisible() {
         buttonColor.setVisible(false);
         angoloLabel.setVisible(false);
@@ -125,7 +157,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         xCoordLabel.setVisible(false);
         yCoordLabel.setVisible(false);
         nameLabel.setVisible(false);
-
+        
         textColor.setVisible(false);
         textForza.setVisible(false);
         textAngolo.setVisible(false);
@@ -133,7 +165,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         textY1.setVisible(false);
         textName.setVisible(false);
     }
-
+    
     public void setEmptyText() {
         textX1.setText("");
         textY1.setText("");
@@ -172,7 +204,6 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         newVectorButton = new javax.swing.JButton();
         backButton = new javax.swing.JButton();
         removeButton = new javax.swing.JButton();
-        applyButton = new javax.swing.JButton();
         canvasPanel = new javax.swing.JPanel();
         jToolBar1 = new javax.swing.JToolBar();
         startButton = new javax.swing.JButton();
@@ -208,7 +239,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
             }
         });
 
-        angoloLabel.setText("Angolo");
+        angoloLabel.setText("Angolo°");
 
         forzaLabel.setText("Forza");
 
@@ -216,12 +247,35 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
 
         yCoordLabel.setText("Y");
 
-        textAngolo.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
-            public void propertyChange(java.beans.PropertyChangeEvent evt) {
-                textAngoloPropertyChange(evt);
+        textAngolo.addCaretListener(new javax.swing.event.CaretListener() {
+            public void caretUpdate(javax.swing.event.CaretEvent evt) {
+                textAngoloCaretUpdate(evt);
             }
         });
 
+        textForza.addCaretListener(new javax.swing.event.CaretListener() {
+            public void caretUpdate(javax.swing.event.CaretEvent evt) {
+                textForzaCaretUpdate(evt);
+            }
+        });
+
+        textX1.addCaretListener(new javax.swing.event.CaretListener() {
+            public void caretUpdate(javax.swing.event.CaretEvent evt) {
+                textX1CaretUpdate(evt);
+            }
+        });
+
+        textY1.addCaretListener(new javax.swing.event.CaretListener() {
+            public void caretUpdate(javax.swing.event.CaretEvent evt) {
+                textY1CaretUpdate(evt);
+            }
+        });
+
+        textName.addCaretListener(new javax.swing.event.CaretListener() {
+            public void caretUpdate(javax.swing.event.CaretEvent evt) {
+                textNameCaretUpdate(evt);
+            }
+        });
         textName.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 textNameActionPerformed(evt);
@@ -230,6 +284,14 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         textName.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
             public void propertyChange(java.beans.PropertyChangeEvent evt) {
                 textNamePropertyChange(evt);
+            }
+        });
+        textName.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                textNameKeyReleased(evt);
+            }
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                textNameKeyTyped(evt);
             }
         });
 
@@ -260,13 +322,15 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
                     .addComponent(textColor))
                 .addGap(18, 18, 18)
                 .addGroup(vectorInputPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(textAngolo, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(textName, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(textForza, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(textX1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(textY1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(buttonColor, javax.swing.GroupLayout.PREFERRED_SIZE, 66, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(11, Short.MAX_VALUE))
+                    .addComponent(textName)
+                    .addGroup(vectorInputPanelLayout.createSequentialGroup()
+                        .addComponent(buttonColor, javax.swing.GroupLayout.PREFERRED_SIZE, 66, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 121, Short.MAX_VALUE))
+                    .addComponent(textAngolo)
+                    .addComponent(textForza)
+                    .addComponent(textX1)
+                    .addComponent(textY1))
+                .addContainerGap())
         );
         vectorInputPanelLayout.setVerticalGroup(
             vectorInputPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -314,6 +378,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
             }
         });
 
+        vectorList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         vectorList.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 vectorListMouseClicked(evt);
@@ -350,13 +415,6 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
             }
         });
 
-        applyButton.setText("apply");
-        applyButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                applyButtonActionPerformed(evt);
-            }
-        });
-
         javax.swing.GroupLayout controlsPanelLayout = new javax.swing.GroupLayout(controlsPanel);
         controlsPanel.setLayout(controlsPanelLayout);
         controlsPanelLayout.setHorizontalGroup(
@@ -365,11 +423,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(controlsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(controlsPanelLayout.createSequentialGroup()
-                        .addGroup(controlsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(controlsPanelLayout.createSequentialGroup()
-                                .addGap(87, 87, 87)
-                                .addComponent(vectorInputPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(jCheckBox1))
+                        .addComponent(jCheckBox1)
                         .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(controlsPanelLayout.createSequentialGroup()
                         .addGroup(controlsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -383,18 +437,19 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
                                 .addGap(0, 0, Short.MAX_VALUE)))
                         .addContainerGap())))
             .addGroup(controlsPanelLayout.createSequentialGroup()
-                .addGap(65, 65, 65)
-                .addComponent(removeButton)
-                .addGap(18, 18, 18)
-                .addComponent(applyButton)
+                .addGroup(controlsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(controlsPanelLayout.createSequentialGroup()
+                        .addGap(109, 109, 109)
+                        .addComponent(removeButton))
+                    .addGroup(controlsPanelLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(vectorInputPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGap(0, 0, Short.MAX_VALUE))
         );
         controlsPanelLayout.setVerticalGroup(
             controlsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(controlsPanelLayout.createSequentialGroup()
-                .addGroup(controlsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(removeButton)
-                    .addComponent(applyButton))
+                .addComponent(removeButton)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(vectorsScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 333, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -525,7 +580,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
     private void jCheckBox1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBox1ActionPerformed
 
     }//GEN-LAST:event_jCheckBox1ActionPerformed
-    public boolean isDouble(String str){
+    public boolean isDouble(String str) {
         try {
             Double.parseDouble(str);
             return true;
@@ -533,33 +588,23 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
             return false;
         }
     }
+
     private void createButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_createButtonActionPerformed
         String nameVar = textName.getText();
         /*int[] selected = vectorList.getSelectedIndices();
         if (selected[0] != 0) {*/
-            if (!(nameVar.equals(""))) {
+        if (!(nameVar.equals(""))) {
             Vector vector = null;
             if (jCheckBox1.isSelected() && isDouble(textAngolo.getText()) && isDouble(textForza.getText())) {
-                vector = new Vector(nameVar, Double.parseDouble(textAngolo.getText()), Double.parseDouble(textForza.getText()));
+                vector = new Vector(Double.parseDouble(textAngolo.getText()), Double.parseDouble(textForza.getText()), nameVar, true);
                 vectors.add(vector);
-            } else if(isDouble(textX1.getText()) && isDouble(textY1.getText())){
-                vector = new Vector(Double.parseDouble(textX1.getText()), Double.parseDouble(textY1.getText()), nameVar);
+            } else if (isDouble(textX1.getText()) && isDouble(textY1.getText())) {
+                vector = new Vector(Double.parseDouble(textX1.getText()), Double.parseDouble(textY1.getText()), nameVar, false);
                 vectors.add(vector);
             }
-            if(vector != null){
-                vectorList.setModel(new javax.swing.AbstractListModel<String>() {
-
-                    String[] strings = addVectorNames();
-
-                    public int getSize() {
-                        return strings.length;
-                    }
-
-                    public String getElementAt(int i) {
-                        return strings[i];
-                    }
-                });
-                vectorsScrollPane.setViewportView(vectorList);
+            if (vector != null) {
+                enableKeyInput = false;
+                updateList();
                 allVisible();
                 createButton.setVisible(false);
                 textX1.setText(vector.x + "");
@@ -567,11 +612,9 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
                 textForza.setText(vector.forza + "");
                 textAngolo.setText(vector.angolo + "");
                 jCheckBox1.setEnabled(true);
-                xRis += vector.x;
-                yRis += vector.y;
-                fRis = new Vector(xRis, yRis, "forza risultante");
-                vectors.set(0, fRis);
+                enableKeyInput = true;
                 repaint();
+                
             }
         }
         
@@ -583,60 +626,62 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
     }//GEN-LAST:event_vectorListKeyPressed
 
     private void vectorListMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_vectorListMouseClicked
+        
         int[] selectedVectors = vectorList.getSelectedIndices();
         if (selectedVectors.length == 1) {
+            enableKeyInput = false;
+            
             textX1.setText(String.valueOf(vectors.get(selectedVectors[0]).x));
             textY1.setText(String.valueOf(vectors.get(selectedVectors[0]).y));
             textForza.setText(String.valueOf(vectors.get(selectedVectors[0]).forza));
             textAngolo.setText(String.valueOf(vectors.get(selectedVectors[0]).angolo));
             textName.setText(vectors.get(selectedVectors[0]).name);
+            enableKeyInput = true;
         }
     }//GEN-LAST:event_vectorListMouseClicked
 
     private void textNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_textNameActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_textNameActionPerformed
-    int x;
-    int y;
-    int finalX;
-    int finalY;
-    int num = 0;
-    boolean drag = false;
+    
     private void formMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_formMousePressed
 
     }//GEN-LAST:event_formMousePressed
     
     private void updateList() {
-        vectorList.setModel(new javax.swing.AbstractListModel<String>() {
-
-            String[] strings = addVectorNames();
-
-            public int getSize() {
-                return strings.length;
-            }
-
-            public String getElementAt(int i) {
-                return strings[i];
-            }
-        });
-        vectorsScrollPane.setViewportView(vectorList);
         xRis = 0;
         yRis = 0;
         for (int i = 1; i < vectors.size(); i++) {
             xRis += vectors.get(i).x;
             yRis += vectors.get(i).y;
         }
-        fRis = new Vector(xRis, yRis, "forza risultante");
+        fRis = new Vector(xRis, yRis, "forza risultante", false);
         vectors.set(0, fRis);
+        vectorList.setModel(new javax.swing.AbstractListModel<String>() {
+            
+            String[] strings = addVectorNames();
+            
+            public int getSize() {
+                return strings.length;
+            }
+            
+            public String getElementAt(int i) {
+                return strings[i];
+            }
+        });
+        vectorsScrollPane.setViewportView(vectorList);
+        vectorsScrollPane.updateUI();
+        vectorList.setSelectedIndex(vectors.size() - 1);
         repaint();
     }
     private void canvasPanelMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_canvasPanelMouseReleased
+        
         finalX = evt.getX() - x;
         finalY = evt.getY() - y;
-        Vector vector = new Vector(finalX, finalY, "drawVector" + num);
+        Vector vector = new Vector(finalX, finalY, "drawVector" + num, false);
         
         vectors.add(vector);
-        updateList();
+        enableKeyInput = false;
         allVisible();
         vectorInputPanel.updateUI();
         textX1.setText(vector.x + "");
@@ -644,20 +689,24 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         textForza.setText(vector.forza + "");
         textAngolo.setText(vector.angolo + "");
         textName.setText("drawVector" + num);
+        enableKeyInput = true;
         num += 1;
-        jCheckBox1.setEnabled(true);
-        if(!firstVec){
+        //jCheckBox1.setEnabled(true);
+        if (!firstVec) {
             xRis += vector.x;
             yRis += vector.y;
         }
         firstVec = false;
-        fRis = new Vector(xRis, yRis, "forza risultante");
+        fRis = new Vector(xRis, yRis, "forza risultante", false);
         vectors.set(0, fRis);
+        
+        updateList();
+        
         drag = false;
         
         repaint();
     }//GEN-LAST:event_canvasPanelMouseReleased
-    
+
     private void canvasPanelMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_canvasPanelMousePressed
         x = evt.getX();
         y = evt.getY();
@@ -666,7 +715,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
     private void canvasPanelMouseDragged(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_canvasPanelMouseDragged
         finalX = evt.getX();
         finalY = evt.getY();
-        vectorTemp = new Vector(finalX, finalY, "vettoreTemporaneoXMouseDragged");
+        vectorTemp = new Vector(finalX, finalY, "vettoreTemporaneoXMouseDragged", false);
         drag = true;
         repaint();
         //repaint(finalX, finalY, 0, 0);
@@ -689,13 +738,12 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
     }//GEN-LAST:event_resetButtonActionPerformed
 
     private void stopButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stopButtonActionPerformed
-
+        
         timer.stop();
         repaint();
     }//GEN-LAST:event_stopButtonActionPerformed
 
     private void startButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startButtonActionPerformed
-
         ActionListener act;
         act = new ActionListener() {
             public void actionPerformed(ActionEvent evt) {
@@ -705,7 +753,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
             }
         };
         timer = new Timer(1, act);
-        timer.start(); 
+        timer.start();
         animationStarted = true;
     }//GEN-LAST:event_startButtonActionPerformed
 
@@ -713,13 +761,13 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         int[] selected = vectorList.getSelectedIndices();
         if (selected.length == 1) {
             Color newColor = JColorChooser.showDialog(null, "Choose a color", Color.BLUE);
-            vectors.get(selected[0]-1).colore = newColor;
+            vectors.get(selected[0] - 1).colore = newColor;
             repaint();
         }
     }//GEN-LAST:event_buttonColorActionPerformed
 
     private void removeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeButtonActionPerformed
-
+        
         int[] selected = vectorList.getSelectedIndices();
         if (selected == null || selected.length == 0) {
             return;
@@ -733,32 +781,29 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
     }//GEN-LAST:event_removeButtonActionPerformed
 
     private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveButtonActionPerformed
-        for (int i = 0; i < vectors.size(); i++) {
+        for (int i = 1; i < vectors.size(); i++) {
             Vector vector = vectors.get(i);
-            try{
+            try {
                 saveState(vector);
-            }catch(IOException e){
-                Path fileName = Path.of("vectors.txt");
-                System.out.println(fileName);
+            } catch (IOException e) {
+                System.out.println("IOException");
             }
-        }   
+        }
     }//GEN-LAST:event_saveButtonActionPerformed
 
     private void importButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_importButtonActionPerformed
         JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setCurrentDirectory(new File("."));
         int returnValue = fileChooser.showOpenDialog(null);
-        if (returnValue == JFileChooser.APPROVE_OPTION) 
-        {
-        File selectedFile = fileChooser.getSelectedFile();
-        System.out.println(selectedFile.getName());
-        try{
-            importFile(selectedFile);
-        }catch(IOException e){
-            System.out.println("IOException");
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            System.out.println(selectedFile.getName());
+            try {
+                importFile(selectedFile);
+            } catch (IOException e) {
+                System.out.println("IOException");
+            }
         }
-        
-        }
-        
     }//GEN-LAST:event_importButtonActionPerformed
 
     private void controlsPanelAncestorResized(java.awt.event.HierarchyEvent evt) {//GEN-FIRST:event_controlsPanelAncestorResized
@@ -774,7 +819,7 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
     }//GEN-LAST:event_formAncestorResized
 
     private void formComponentResized(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_formComponentResized
-        if(!animationStarted){
+        if (!animationStarted) {
             xCenter = (canvasPanel.getX() + canvasPanel.getWidth()) / 2;
             yCenter = (canvasPanel.getY() + canvasPanel.getHeight()) / 2;
             xObject = xCenter;
@@ -783,68 +828,155 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
         repaint();
     }//GEN-LAST:event_formComponentResized
 
-    private void applyButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_applyButtonActionPerformed
-       int[] selected = vectorList.getSelectedIndices();
-        if (selected[0] != 0 && selected.length == 1 && isDouble(textAngolo.getText()) &&
-                isDouble(textForza.getText()) && isDouble(textX1.getText()) &&
-                isDouble(textY1.getText()) && textName.getText() != null) {
-            double oldAngolo = vectors.get(selected[0]).angolo;
-            double oldForza = vectors.get(selected[0]).forza;
-            double oldX = vectors.get(selected[0]).x;
-            double oldY = vectors.get(selected[0]).y;
-            String oldName = vectors.get(selected[0]).name;
-            double newAngolo = Double.parseDouble(textAngolo.getText());
-            double newForza = Double.parseDouble(textAngolo.getText());
-            double newX = Double.parseDouble(textAngolo.getText());
-            double newY = Double.parseDouble(textAngolo.getText());
-            String newName = textAngolo.getText();
-                if(oldAngolo != newAngolo ){
-                    
-                }
-            vectors.get(selected[0]).y = Double.parseDouble(textForza.getText());
-            vectors.get(selected[0]).x = Double.parseDouble(textX1.getText());
-            vectors.get(selected[0]).forza = Double.parseDouble(textY1.getText());
-            vectors.get(selected[0]).name = textName.getText();
-        }
-        repaint();
-    }//GEN-LAST:event_applyButtonActionPerformed
-
     private void textNamePropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_textNamePropertyChange
-        
+//        if(changedKeyInput){
+//            int[] selected = vectorList.getSelectedIndices();
+//            System.out.println("a");
+//            if (selected.length == 1 && selected[0] != 0) {
+//                vectors.get(selected[0]).name = textName.getText();
+//                updateList();
+//            }
+//            
+//        }
     }//GEN-LAST:event_textNamePropertyChange
 
-    private void textAngoloPropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_textAngoloPropertyChange
-        
-    }//GEN-LAST:event_textAngoloPropertyChange
-    private void saveState(Vector vector)throws IOException{
+    private void textNameKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_textNameKeyReleased
+
+    }//GEN-LAST:event_textNameKeyReleased
+
+    private void textNameKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_textNameKeyTyped
+
+    }//GEN-LAST:event_textNameKeyTyped
+
+    private void textNameCaretUpdate(javax.swing.event.CaretEvent evt) {//GEN-FIRST:event_textNameCaretUpdate
+        if (enableKeyInput) {
+            int selected = vectorList.getSelectedIndex();
+            if (selected > 0 && (textName.getText()).length() > 0) {
+                vectors.get(selected).name = textName.getText();
+                updateList();
+                vectorList.setSelectedIndex(selected);
+            }
+        }
+    }//GEN-LAST:event_textNameCaretUpdate
+
+    private void textAngoloCaretUpdate(javax.swing.event.CaretEvent evt) {//GEN-FIRST:event_textAngoloCaretUpdate
+        if (enableKeyInput) {
+            int selected = vectorList.getSelectedIndex();
+            System.out.println(String.format("A  selected %d, text: %s, angolo %s, forza %s, x: %s, y: %s", selected, textName.getText(), textAngolo.getText(), textForza.getText(), textX1.getText(), textY1.getText()));
+            if (selected > 0 && (textAngolo.getText()).length() > 0) {
+                if (isDouble(textAngolo.getText())) {
+                    
+                    Double angolo = Double.parseDouble(textAngolo.getText());
+                    vectors.get(selected).setAngolo(angolo);
+                    System.out.println(vectors.get(selected));
+                    enableKeyInput = false;
+                    textX1.setText(vectors.get(selected).x + "");
+                    textY1.setText(vectors.get(selected).y + "");
+                    enableKeyInput = true;
+                    updateList();
+                    vectorList.setSelectedIndex(selected);
+                }
+            }
+        }
+    }//GEN-LAST:event_textAngoloCaretUpdate
+
+    private void textForzaCaretUpdate(javax.swing.event.CaretEvent evt) {//GEN-FIRST:event_textForzaCaretUpdate
+        if (enableKeyInput) {
+            int selected = vectorList.getSelectedIndex();
+            System.out.println(String.format("F  selected %d, text: %s, angolo %s, forza %s, x: %s, y: %s", selected, textName.getText(), textAngolo.getText(), textForza.getText(), textX1.getText(), textY1.getText()));
+            if (selected > 0 && (textForza.getText()).length() > 0) {
+                if (isDouble(textForza.getText())) {
+                    //if(vectors.get(selected).x<0 && vectors.get(selected).y<0){
+                    //vectors.get(selected).x = vectors.get(selected).x*-1;
+                    //vectors.get(selected).y = vectors.get(selected).y*-1;
+                    //}
+                    Double forza = Double.parseDouble(textForza.getText());
+                    vectors.get(selected).setForza(forza);
+                    System.out.println(vectors.get(selected));
+                    enableKeyInput = false;
+                    textX1.setText(vectors.get(selected).x + "");
+                    textY1.setText(vectors.get(selected).y + "");
+                    enableKeyInput = true;
+                    updateList();
+                    vectorList.setSelectedIndex(selected);
+                }
+            }
+        }
+    }//GEN-LAST:event_textForzaCaretUpdate
+
+    private void textX1CaretUpdate(javax.swing.event.CaretEvent evt) {//GEN-FIRST:event_textX1CaretUpdate
+        if (enableKeyInput) {
+            int selected = vectorList.getSelectedIndex();
+            System.out.println(String.format("X1 selected %d, text: %s, angolo %s, forza %s, x: %s, y: %s", selected, textName.getText(), textAngolo.getText(), textForza.getText(), textX1.getText(), textY1.getText()));
+            if (selected > 0 && (textX1.getText()).length() > 0) {
+                if (isDouble(textX1.getText())) {
+                    
+                    Double x = Double.parseDouble(textX1.getText());
+                    vectors.get(selected).setX(x);
+                    System.out.println(vectors.get(selected));
+                    enableKeyInput = false;
+                    textAngolo.setText(vectors.get(selected).angolo + "");
+                    textForza.setText(vectors.get(selected).forza + "");
+                    enableKeyInput = true;
+                    updateList();
+                    vectorList.setSelectedIndex(selected);
+                }
+            }
+        }
+    }//GEN-LAST:event_textX1CaretUpdate
+
+    private void textY1CaretUpdate(javax.swing.event.CaretEvent evt) {//GEN-FIRST:event_textY1CaretUpdate
+        if (enableKeyInput) {
+            int selected = vectorList.getSelectedIndex();
+            System.out.println(String.format("Y1 selected %d, text: %s, angolo %s, forza %s, x: %s, y: %s", selected, textName.getText(), textAngolo.getText(), textForza.getText(), textX1.getText(), textY1.getText()));
+            
+            if (selected > 0 && (textY1.getText()).length() > 0) {
+                if (isDouble(textY1.getText())) {
+                    
+                    Double y = Double.parseDouble(textY1.getText());
+                    vectors.get(selected).setY(y);
+                    System.out.println(vectors.get(selected));
+                    enableKeyInput = false;
+                    textAngolo.setText(vectors.get(selected).angolo + "");
+                    textForza.setText(vectors.get(selected).forza + "");
+                    enableKeyInput = true;
+                    updateList();
+                    vectorList.setSelectedIndex(selected);
+                }
+            }
+        }
+    }//GEN-LAST:event_textY1CaretUpdate
+    private void saveState(Vector vector) throws IOException {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy.MM.dd HH.mm.ss");
         LocalDateTime now = LocalDateTime.now();
         String nameFile = "vectors" + dtf.format(now) + ".txt";
         Path fileName = Paths.get(nameFile);
-        String text = vector.x +";"+ vector.y +";"+ vector.forza +";"+ vector.angolo +";" + vector.name +";" +xObject + ";"+ yObject + "\n";
+        String text = vector.x + ";" + vector.y + ";" + vector.forza + ";" + vector.angolo + ";" + vector.name + ";" + xObject + ";" + yObject + "\n";
         File myObj = new File("vectors" + dtf.format(now) + ".txt");
         myObj.createNewFile();
-        Files.write(fileName,text.getBytes(), StandardOpenOption.APPEND);
-        
+        Files.write(fileName, text.getBytes(), StandardOpenOption.APPEND);
+
         //String file_content = Files.readString(fileName);
     }
+    
     private void importFile(File selectedFile) throws IOException {
         Path fileName = selectedFile.toPath();
-        if(Files.exists(fileName) && Files.isReadable(fileName)){
+        if (Files.exists(fileName) && Files.isReadable(fileName)) {
             List<String> lines = Files.readAllLines(fileName);
             vectors.clear();
-            for (String line : lines) 
-            { 
+            vectors.add(fRis);
+            for (String line : lines) {
                 String[] parts = line.split(";");
-                Vector vector = new Vector(Double.parseDouble(parts[0]), Double.parseDouble(parts[1]), parts[4]);
+                Vector vector = new Vector(Double.parseDouble(parts[0]), Double.parseDouble(parts[1]), parts[4], false);
                 xObject = Double.parseDouble(parts[5]);
-                xObject = Double.parseDouble(parts[6]);
+                yObject = Double.parseDouble(parts[6]);
                 vectors.add(vector);
             }
             updateList();
+            allVisible();
         }
-        
     }
+    
     public static void main(String args[]) {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
@@ -879,7 +1011,6 @@ public class InterfacciaGrafica extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel angoloLabel;
-    private javax.swing.JButton applyButton;
     private javax.swing.JButton backButton;
     private javax.swing.JButton buttonColor;
     private javax.swing.JPanel canvasPanel;

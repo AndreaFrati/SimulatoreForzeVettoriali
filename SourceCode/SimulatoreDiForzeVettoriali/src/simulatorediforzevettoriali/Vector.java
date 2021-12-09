@@ -24,21 +24,69 @@ public class Vector {
         return this.name;
     }
     
-    public Vector(double x, double y, String name){
-        this.name = name;
-        this.x = x;
-        this.y = y;
-        this.forza = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
-        if(x == 0){
-            x = 1;
+    public Vector(double xOrAngle, double yOrForza, String name, boolean polarCoord){
+        if(polarCoord){
+            this.name = name;
+            this.forza = yOrForza;
+            this.angolo = xOrAngle;
+            this.x = calcolaX(xOrAngle, yOrForza);
+            this.y = calcolaY(xOrAngle, yOrForza);
+        }else{
+            this.name = name;
+            this.x = xOrAngle;
+            this.y = yOrForza;
+            this.forza = calcolaForza(xOrAngle, yOrForza);
+            this.angolo = calcolaAngolo(xOrAngle, yOrForza);
         }
-        this.angolo = Math.toDegrees(Math.atan(y/x));
     }
-    public Vector(String name, double angolo, double forza){
-        this.name = name;
-        this. forza = forza;
+    
+    
+    public static double calcolaForza(double x, double y){
+        return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+    }
+    public static double calcolaAngolo(double x, double y){
+        return Math.toDegrees(Math.atan(y/x));
+    }
+    public static double calcolaX(double angolo, double forza){
+        return forza * Math.cos(Math.toRadians(angolo));
+    }
+    public static double calcolaY(double angolo, double forza){
+        return forza * Math.sin(Math.toRadians(angolo));
+    }
+
+    public void setAngolo(double angolo) {
         this.angolo = angolo;
-        this.x = forza * Math.cos(angolo);
-        this.y = forza * Math.sin(angolo);
+        this.x = forza * Math.cos(Math.toRadians(angolo));
+        this.y = forza * Math.sin(Math.toRadians(angolo));
     }
+
+    public void setForza(double forza) {
+        this.forza = forza;
+        this.x = forza * Math.cos(Math.toRadians(angolo));
+        this.y = forza * Math.sin(Math.toRadians(angolo));        
+    }
+
+    public void setX(double x) {
+        this.x = x;
+        angolo = Vector.calcolaAngolo(x,y);
+        forza = Vector.calcolaForza(x,y);
+    }
+
+    public void setY(double y) {
+        this.y = y;
+        angolo = Vector.calcolaAngolo(x,y);
+        forza = Vector.calcolaForza(x,y);        
+    }
+
+    @Override
+    public String toString() {
+        String str = "";
+        str += "Vector (";
+        str += String.format("name: %s, angolo: %s, forza: %s, x: %s, y: %s", name, angolo, forza, x, y);
+        str += ")";
+        return str;
+    }
+    
+    
+    
 }
