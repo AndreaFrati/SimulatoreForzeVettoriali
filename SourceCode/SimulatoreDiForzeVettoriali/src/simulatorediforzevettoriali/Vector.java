@@ -23,7 +23,7 @@ public class Vector {
     public String getName(){
         return this.name;
     }
-    
+       
     public Vector(double xOrAngle, double yOrForza, String name, boolean polarCoord){
         if(polarCoord){
             this.name = name;
@@ -40,6 +40,10 @@ public class Vector {
         }
     }
     
+    public Vector(double xOrAngle, double yOrForza, String name, boolean polarCoord, Color color){
+        this(xOrAngle, yOrForza, name, polarCoord);
+        this.colore = color;
+    }
     
     public static double calcolaForza(double x, double y){
         return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
@@ -53,6 +57,10 @@ public class Vector {
     public static double calcolaY(double angolo, double forza){
         return forza * Math.sin(Math.toRadians(angolo));
     }
+
+    public void setColore(Color colore) {
+        this.colore = colore;
+    }  
 
     public void setAngolo(double angolo) {
         this.angolo = angolo;
