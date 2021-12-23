@@ -16,14 +16,10 @@ import javax.swing.JPanel;
 public class Vector {
     protected String name;
     protected double forza;
-    protected Color colore = Color.GREEN;
+    protected Color colore;
     protected double x;
     protected double y;
     protected double angolo;
-    public String getName(){
-        return this.name;
-    }
-       
     public Vector(double xOrAngle, double yOrForza, String name, boolean polarCoord){
         if(polarCoord){
             this.name = name;
@@ -39,11 +35,13 @@ public class Vector {
             this.angolo = calcolaAngolo(xOrAngle, yOrForza);
         }
     }
-    
     public Vector(double xOrAngle, double yOrForza, String name, boolean polarCoord, Color color){
         this(xOrAngle, yOrForza, name, polarCoord);
         this.colore = color;
     }
+    public void setColore(Color colore) {
+        this.colore = colore;
+    }  
     
     public static double calcolaForza(double x, double y){
         return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
@@ -58,32 +56,25 @@ public class Vector {
         return forza * Math.sin(Math.toRadians(angolo));
     }
 
-    public void setColore(Color colore) {
-        this.colore = colore;
-    }  
-
     public void setAngolo(double angolo) {
         this.angolo = angolo;
-        this.x = forza * Math.cos(Math.toRadians(angolo));
-        this.y = forza * Math.sin(Math.toRadians(angolo));
+        this.x = Vector.calcolaX(angolo,forza);
+        this.y = Vector.calcolaY(angolo,forza);  
     }
-
     public void setForza(double forza) {
         this.forza = forza;
-        this.x = forza * Math.cos(Math.toRadians(angolo));
-        this.y = forza * Math.sin(Math.toRadians(angolo));        
+        this.x = Vector.calcolaX(angolo,forza);
+        this.y = Vector.calcolaY(angolo,forza);  
     }
-
     public void setX(double x) {
         this.x = x;
-        angolo = Vector.calcolaAngolo(x,y);
-        forza = Vector.calcolaForza(x,y);
+        this.angolo = Vector.calcolaAngolo(x,y);
+        this.forza = Vector.calcolaForza(x,y);
     }
-
     public void setY(double y) {
         this.y = y;
-        angolo = Vector.calcolaAngolo(x,y);
-        forza = Vector.calcolaForza(x,y);        
+        this.angolo = Vector.calcolaAngolo(x,y);
+        this.forza = Vector.calcolaForza(x,y);        
     }
 
     @Override
